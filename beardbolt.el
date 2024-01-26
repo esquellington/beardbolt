@@ -80,6 +80,12 @@ Passed directly to compiler or disassembler."
 (bb--defoption bb-shuffle-rainbow nil
   "Choose less pretty, but potentially more contrasting rainbow colors."
   :type 'boolean :safe 'booleanp)
+(bb--defoption bb-gcc-include-flags nil
+  "Include flags for GCC/clang."
+  :type 'string :safe (lambda (v) (or (listp v) (stringp v))))
+(bb--defoption bb-gcc-optimization-flags nil
+  "Optimization flags for GCC/clang."
+  :type 'string :safe (lambda (v) (or (listp v) (stringp v))))
 
 (defface bb-current-line-face
   '((t (:weight bold :inherit highlight)))
@@ -207,7 +213,7 @@ Useful if you have multiple objdumpers and want to select between them")
   "Get compile specs for gcc/clang."
   (let* ((modified-p (buffer-modified-p))
          (source-hint (if modified-p "<stdin>" (buffer-file-name)))
-         (base-command (ensure-list (or bb-command
+         (base-command (ensure-list (or (concat bb-command " " bb-gcc-optimization-flags " " bb-gcc-include-flags)
                                         (bb--guess-from-ccj)
                                         base-cmd)))
          (cc (car (split-string (car base-command)))))
@@ -635,11 +641,18 @@ determine LANG from `major-mode'."
       (set-process-query-on-exit-flag proc nil)
       (interrupt-process proc))))
 
+(defun bb-set-gcc-optimizaiton-level (level)
+  "Setup GCC optimization LEVEL 0..3 and recompile."
+  (interactive "nLevel: ")
+  (setq bb-gcc-optimization-flags (format "-O%d" level))
+  (bb-compile (assoc major-mode bb-languages)))
+
 ;;;; Keymap
 (defvar bb-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-c") #'bb-compile)
     (define-key map (kbd "C-c C-d") #'bb-clear-rainbow-overlays)
+    (define-key map (kbd "C-c C-l") #'bb-set-gcc-optimizaiton-level)
     map)
   "Keymap for function `bb-mode'.")
 
@@ -765,7 +778,7 @@ With prefix argument, choose from starter files in `bb-starter-files'."
 ;;;###autoload
 (define-minor-mode bb-mode
   "Toggle `beardbolt-mode'.  May be enabled by user in source buffer."
-  :global nil :lighter " ⚡" :keymap bb-mode-map
+  :global nil :lighter " ⚡SRC" :keymap bb-mode-map
   (cond
    (bb-mode
     (add-hook 'after-change-functions #'bb--after-change nil t)
@@ -774,14 +787,16 @@ With prefix argument, choose from starter files in `bb-starter-files'."
     (remove-hook 'after-change-functions #'bb--after-change t)
     (remove-hook 'post-command-hook #'bb--synch-relation-overlays t))))
 
-(define-derived-mode bb--asm-mode asm-mode "⚡asm ⚡"
+(define-derived-mode bb--asm-mode asm-mode (concat " ⚡ASM" bb-gcc-optimization-flags "⚡") ;Show optimization level in mode-line
   "Toggle `bearbolt--output-mode', internal mode for asm buffers."
   (add-hook 'kill-buffer-hook #'bb-clear-rainbow-overlays nil t)
   (add-hook 'post-command-hook #'bb--synch-relation-overlays nil t)
   (setq truncate-lines t)
   (read-only-mode t)
   (buffer-disable-undo)
-  (local-set-key (kbd "q") 'quit-window))
+  (local-set-key (kbd "q") 'quit-window)
+  (local-set-key (kbd "n") 'next-line)
+  (local-set-key (kbd "p") 'previous-line))
 
 (provide 'beardbolt)
 
