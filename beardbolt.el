@@ -83,6 +83,9 @@ Passed directly to compiler or disassembler."
 (bb--defoption bb-gcc-include-flags nil
   "Include flags for GCC/clang."
   :type 'string :safe (lambda (v) (or (listp v) (stringp v))))
+(bb--defoption bb-gcc-args nil
+  "Basic flags for GCC/clang."
+  :type 'string :safe (lambda (v) (or (listp v) (stringp v))))
 (bb--defoption bb-gcc-optimization-flags nil
   "Optimization flags for GCC/clang."
   :type 'string :safe (lambda (v) (or (listp v) (stringp v))))
@@ -213,7 +216,7 @@ Useful if you have multiple objdumpers and want to select between them")
   "Get compile specs for gcc/clang."
   (let* ((modified-p (buffer-modified-p))
          (source-hint (if modified-p "<stdin>" (buffer-file-name)))
-         (base-command (ensure-list (or (concat bb-command " " bb-gcc-optimization-flags " " bb-gcc-include-flags)
+         (base-command (ensure-list (or (concat bb-command " " bb-gcc-args " " bb-gcc-optimization-flags " " bb-gcc-include-flags)
                                         (bb--guess-from-ccj)
                                         base-cmd)))
          (cc (car (split-string (car base-command)))))
