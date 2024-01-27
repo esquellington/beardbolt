@@ -493,6 +493,7 @@ some parts of the buffer and setup a buffer-local value of
           with muted-hsl = (list (car bright-hsl)
                                  (/ (cadr bright-hsl) 2.0)
                                  (caddr bright-hsl))
+          ;;TODO try to make actual colors optional, but not SRC/ASM mapping and highlight --> could map color and muted-color to current BUFFER background COLORS instead, to hide rainbow effect completely
           with color = (apply #'color-rgb-to-hex (apply #'color-hsl-to-rgb bright-hsl))
           with muted-color = (apply #'color-rgb-to-hex (apply #'color-hsl-to-rgb muted-hsl))
           for (beg . end) in asm-pos-regions
@@ -576,7 +577,7 @@ Argument STR compilation finish status."
           (when (bb--get bb-demangle)
             (shell-command-on-region (point-min) (point-max) "c++filt"
                                      (current-buffer) 'no-mark))
-          (bb--rainbowize src-buffer))
+          (bb--rainbowize src-buffer)) ;;This creates correspondences between SRC/ASM lines, so cannot be skipped to disable rainbow
          (t
           (insert "<Compilation failed>")))
         (unless (or (string-match "^interrupt" str)
@@ -718,7 +719,7 @@ With prefix argument, choose from starter files in `bb-starter-files'."
                          at-point)))
     (cond ((and ov (not (member ov bb--currently-synched-overlays)))
            (dolist (o all-ovs)
-             (overlay-put o 'face (overlay-get o 'beardbolt-muted-face)))
+             (overlay-put o 'face (overlay-get o 'beardbolt-muted-face))) ;;TODO This syncs lines by adding muted face??
            (setq bb--currently-synched-overlays
                  (overlay-get ov 'beardbolt-related-overlays))
            (setq bb--currently-synched-overlays
