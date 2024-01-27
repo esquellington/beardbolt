@@ -650,8 +650,8 @@ determine LANG from `major-mode'."
 ;;;; Keymap
 (defvar bb-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") #'bb-compile)
-    (define-key map (kbd "C-c C-d") #'bb-clear-rainbow-overlays)
+    (define-key map (kbd "C-c C-k") #'bb-compile) ;;C-c C-c overrides comment-region
+    (define-key map (kbd "C-c C-r") #'bb-clear-rainbow-overlays) ;;C-c C-d overrides (c-hungry-delete-forward)
     (define-key map (kbd "C-c C-l") #'bb-set-gcc-optimizaiton-level)
     map)
   "Keymap for function `bb-mode'.")
