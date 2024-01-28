@@ -798,7 +798,9 @@ With prefix argument, choose from starter files in `bb-starter-files'."
 ;;;###autoload
 (define-minor-mode bb-mode
   "Toggle `beardbolt-mode'.  May be enabled by user in source buffer."
-  :global nil :lighter " ⚡SRC" :keymap bb-mode-map ;;TODO use cloud ⛈ when auto-comp is disabled??
+  :global nil
+  :lighter (:eval (if bb-auto-compile-on-change " ⚡src" " ⛈src")) ;;" ⚡SRC"
+  :keymap bb-mode-map
   (cond
    (bb-mode
     (add-hook 'after-change-functions #'bb--after-change nil t)
@@ -807,7 +809,7 @@ With prefix argument, choose from starter files in `bb-starter-files'."
     (remove-hook 'after-change-functions #'bb--after-change t)
     (remove-hook 'post-command-hook #'bb--synch-relation-overlays t))))
 
-(define-derived-mode bb--asm-mode asm-mode (concat " ⚡ASM" bb-gcc-arch-flags bb-gcc-optimization-flags "⚡") ;Show arch+opt in mode-line TODO shorter, strip -march and -O !!?
+(define-derived-mode bb--asm-mode asm-mode (concat " ⚡asm" bb-gcc-arch-flags bb-gcc-optimization-flags "⚡") ;Show arch+opt in mode-line TODO shorter, strip -march and -O !!?
   "Toggle `bearbolt--output-mode', internal mode for asm buffers."
   (add-hook 'kill-buffer-hook #'bb-clear-rainbow-overlays nil t)
   (add-hook 'post-command-hook #'bb--synch-relation-overlays nil t)
