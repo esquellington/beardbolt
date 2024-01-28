@@ -583,6 +583,7 @@ Argument STR compilation finish status."
           (bb--rainbowize src-buffer)) ;;This creates correspondences between SRC/ASM lines, so cannot be skipped to disable rainbow
          (t
           (insert "<Compilation failed>")))
+        ;;This keeps compilation buffer open if not finished?
         (unless (or (string-match "^interrupt" str)
                     (get-buffer-window compilation-buffer)
                     (and (string-match "^finished" str)
@@ -658,9 +659,10 @@ determine LANG from `major-mode'."
 ;;;; Keymap
 (defvar bb-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-k") #'bb-compile) ;;C-c C-c overrides comment-region
-    (define-key map (kbd "C-c C-r") #'bb-clear-rainbow-overlays) ;;C-c C-d overrides (c-hungry-delete-forward)
-    (define-key map (kbd "C-c C-l") #'bb-set-gcc-optimizaiton-level)
+    ;; TODO disabled, I prefer local-set-key in mode hook to avoid collisions
+    ;(define-key map (kbd "C-c C-k") #'bb-compile) ;;C-c C-c collides with comment-region
+    ;(define-key map (kbd "C-c C-r") #'bb-clear-rainbow-overlays) ;;C-c C-d collides with c-hungry-delete-forward
+    ;(define-key map (kbd "C-c C-l") #'bb-set-gcc-optimizaiton-level) ;;no collisions
     map)
   "Keymap for function `bb-mode'.")
 
@@ -786,7 +788,7 @@ With prefix argument, choose from starter files in `bb-starter-files'."
 ;;;###autoload
 (define-minor-mode bb-mode
   "Toggle `beardbolt-mode'.  May be enabled by user in source buffer."
-  :global nil :lighter " ⛈⚡SRC" :keymap bb-mode-map ;;TODO use cloud when auto-comp is disabled
+  :global nil :lighter " ⚡SRC" :keymap bb-mode-map ;;TODO use cloud ⛈ when auto-comp is disabled??
   (cond
    (bb-mode
     (add-hook 'after-change-functions #'bb--after-change nil t)
