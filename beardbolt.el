@@ -657,7 +657,9 @@ determine LANG from `major-mode'."
   "Setup GCC optimization LEVEL 0..3 and recompile."
   (interactive "nOptimization Level [0..3]: ")
   (setq bb-gcc-optimization-flags (format "-O%d" level))
-  (bb-compile (assoc major-mode bb-languages)))
+  ;; Recompile if auto
+  (if bb-auto-compile-on-change
+      (bb-compile (assoc major-mode bb-languages))))
 
 (defun bb-toggle-auto-compile-on-change ()
   "Set auto-compilation on change to VALUE."
@@ -668,7 +670,7 @@ determine LANG from `major-mode'."
 ;;;; Keymap
 (defvar bb-mode-map
   (let ((map (make-sparse-keymap)))
-    ;; TODO disabled, I prefer local-set-key in mode hook to avoid collisions
+    ;; NOTE Disabled, I prefer explicitly setting with local-set-key in mode hook to avoid collisions
     ;(define-key map (kbd "C-c C-k") #'bb-compile) ;;C-c C-c collides with comment-region
     ;(define-key map (kbd "C-c C-r") #'bb-clear-rainbow-overlays) ;;C-c C-d collides with c-hungry-delete-forward
     ;(define-key map (kbd "C-c C-l") #'bb-set-gcc-optimizaiton-level) ;;no collisions
