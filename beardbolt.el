@@ -92,6 +92,9 @@ Passed directly to compiler or disassembler."
 (bb--defoption bb-gcc-arch-flags "-march=native"
   "Architecture flags for GCC/clang."
   :type 'string :safe (lambda (v) (or (listp v) (stringp v))))
+(bb--defoption bb-auto-compile-on-change t
+  "Non-nil to compile automatically on SRC change."
+  :type 'boolean :safe 'booleanp)
 
 (defface bb-current-line-face
   '((t (:weight bold :inherit highlight)))
@@ -656,6 +659,12 @@ determine LANG from `major-mode'."
   (setq bb-gcc-optimization-flags (format "-O%d" level))
   (bb-compile (assoc major-mode bb-languages)))
 
+(defun bb-toggle-auto-compile-on-change ()
+  "Set auto-compilation on change to VALUE."
+  (interactive)
+  (setq bb-auto-compile-on-change (not bb-auto-compile-on-change))
+  (message "[beardbolt] auto compile on change = %s" bb-auto-compile-on-change))
+
 ;;;; Keymap
 (defvar bb-mode-map
   (let ((map (make-sparse-keymap)))
@@ -762,11 +771,12 @@ With prefix argument, choose from starter files in `bb-starter-files'."
 
 (defun bb--after-change (&rest _)
   (bb-clear-rainbow-overlays)
-  (when bb-compile-delay
-    (when (timerp bb--change-timer) (cancel-timer bb--change-timer))
-    (setq bb--change-timer
-          (run-with-timer bb-compile-delay nil #'bb-compile
-                          (assoc major-mode bb-languages)))))
+  (if bb-auto-compile-on-change
+      (when bb-compile-delay
+        (when (timerp bb--change-timer) (cancel-timer bb--change-timer))
+        (setq bb--change-timer
+              (run-with-timer bb-compile-delay nil #'bb-compile
+                              (assoc major-mode bb-languages))))))
 
 (defun bb--guess-from-ccj ()
   (if-let* ((ccj-basename "compile_commands.json")
