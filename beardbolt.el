@@ -97,7 +97,9 @@ Passed directly to compiler or disassembler."
   :type 'boolean :safe 'booleanp)
 
 (defface bb-current-line-face
-  '((t (:weight bold :inherit highlight)))
+  '((t (:weight bold
+        :inherit highlight
+        :background "#7f337f" ))) ;;TODO looks nice with ample-zen
   "Face to fontify the current line for showing matches.")
 
 (defvar-local bb--asm-buffer nil)
@@ -499,7 +501,7 @@ some parts of the buffer and setup a buffer-local value of
           with muted-hsl = (list (car bright-hsl)
                                  (/ (cadr bright-hsl) 2.0)
                                  (caddr bright-hsl))
-          ;;TODO try to make actual colors optional, but not SRC/ASM mapping and highlight --> could map color and muted-color to current BUFFER background COLORS instead, to hide rainbow effect completely
+          ;;TODO try to make actual colors optional, but keep SRC/ASM mapping and highlight unchnged --> could map color and muted-color to current BUFFER background COLORS instead, to hide rainbow effect completely
           with color = (apply #'color-rgb-to-hex (apply #'color-hsl-to-rgb bright-hsl))
           with muted-color = (apply #'color-rgb-to-hex (apply #'color-hsl-to-rgb muted-hsl))
           for (beg . end) in asm-pos-regions
