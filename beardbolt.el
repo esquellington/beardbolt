@@ -95,6 +95,9 @@ Passed directly to compiler or disassembler."
 (bb--defoption bb-auto-compile-on-change t
   "Non-nil to compile automatically on SRC change."
   :type 'boolean :safe 'booleanp)
+(bb--defoption bb-auto-execute-after-compile nil
+  "Non-nil to execute automatically on successful compilation."
+  :type 'boolean :safe 'booleanp)
 
 (defface bb-current-line-face
   '((t (:weight bold
@@ -588,7 +591,7 @@ Argument STR compilation finish status."
           (bb--rainbowize src-buffer)) ;;This creates correspondences between SRC/ASM lines, so cannot be skipped to disable rainbow
          (t
           (insert "<Compilation failed>")))
-        ;;This keeps compilation buffer open if not finished?
+        ;;This keeps compilation buffer open if not ^finished?
         (unless (or (string-match "^interrupt" str)
                     (get-buffer-window compilation-buffer)
                     (and (string-match "^finished" str)
@@ -658,16 +661,33 @@ determine LANG from `major-mode'."
 (defun bb-set-gcc-optimizaiton-level (level)
   "Setup buffer-local GCC optimization LEVEL 0..3 and recompile."
   (interactive "nOptimization Level [0..3]: ")
-  (setq-local bb-gcc-optimization-flags (format "-O%d" level))
-  ;; Recompile if auto
-  (if bb-auto-compile-on-change
-      (bb-compile (assoc major-mode bb-languages))))
+  (setq bb-gcc-optimization-flags (format "-O%d" level))
+  (message "[beardbolt] optimization flags = %s" bb-gcc-optimization-flags)
+  ;; Optionally auto-compile
+  (when bb-auto-compile-on-change
+    ;; Compile as done when SRC changes
+    (bb--after-change)))
 
 (defun bb-toggle-auto-compile-on-change ()
   "Set buffer-local auto-compilation on change to VALUE."
   (interactive)
-  (setq-local bb-auto-compile-on-change (not bb-auto-compile-on-change))
+  (setq bb-auto-compile-on-change (not bb-auto-compile-on-change))
+  ;(setq-local bb-auto-compile-on-change (not (buffer-local-value bb-auto-compile-on-change (current-buffer))))
   (message "[beardbolt] auto compile on change = %s" bb-auto-compile-on-change))
+
+(defun bb-toggle-auto-execute-after-compile ()
+  "Set buffer-local auto-execute after successful compilation"
+  (interactive)
+  (setq bb-auto-execute-after-compile (not bb-auto-execute-after-compile))
+  (message "[beardbolt] auto execute after compile = %s" bb-auto-execute-after-compile))
+
+(defun bb-hide-compilation ()
+  "Hide *bb-compilation* buffer, if visible."
+  (interactive)
+  (let (w)
+    (setq w (get-buffer-window "*bb-compilation*"))
+    (when w
+      (delete-window w))))
 
 ;;;; Keymap
 (defvar bb-mode-map
@@ -775,7 +795,7 @@ With prefix argument, choose from starter files in `bb-starter-files'."
 
 (defun bb--after-change (&rest _)
   (bb-clear-rainbow-overlays)
-  (if bb-auto-compile-on-change
+  (when bb-auto-compile-on-change
       (when bb-compile-delay
         (when (timerp bb--change-timer) (cancel-timer bb--change-timer))
         (setq bb--change-timer
@@ -803,7 +823,11 @@ With prefix argument, choose from starter files in `bb-starter-files'."
 (define-minor-mode bb-mode
   "Toggle `beardbolt-mode'.  May be enabled by user in source buffer."
   :global nil
-  :lighter (:eval (if bb-auto-compile-on-change " ⚡src" " ⛈src")) ;;" ⚡SRC"
+  :lighter (:eval ;;Lighter adapts to buffer-local vars
+            (concat " "
+                    (if bb-auto-compile-on-change "⚡" "⛈")
+                    "src"
+                    (if bb-auto-execute-after-compile "🚀" nil)))
   :keymap bb-mode-map
   (cond
    (bb-mode
@@ -813,7 +837,8 @@ With prefix argument, choose from starter files in `bb-starter-files'."
     (remove-hook 'after-change-functions #'bb--after-change t)
     (remove-hook 'post-command-hook #'bb--synch-relation-overlays t))))
 
-(define-derived-mode bb--asm-mode asm-mode (concat " ⚡asm" bb-gcc-arch-flags bb-gcc-optimization-flags "⚡") ;Show arch+opt in mode-line TODO shorter, strip -march and -O !!?
+(define-derived-mode bb--asm-mode asm-mode
+  (concat " ⚡asm" bb-gcc-arch-flags bb-gcc-optimization-flags "⚡") ;Show arch+opt in mode-line TODO shorter, strip -march and -O !!? ;;TODO SHOULD RECEIVE AS PARAMS TO SYNC WITH SRC local vars
   "Toggle `bearbolt--output-mode', internal mode for asm buffers."
   (add-hook 'kill-buffer-hook #'bb-clear-rainbow-overlays nil t)
   (add-hook 'post-command-hook #'bb--synch-relation-overlays nil t)
