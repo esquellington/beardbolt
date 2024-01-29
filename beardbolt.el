@@ -656,17 +656,17 @@ determine LANG from `major-mode'."
 
 ;; TODO Sanitize level=[0..3]
 (defun bb-set-gcc-optimizaiton-level (level)
-  "Setup GCC optimization LEVEL 0..3 and recompile."
+  "Setup buffer-local GCC optimization LEVEL 0..3 and recompile."
   (interactive "nOptimization Level [0..3]: ")
-  (setq bb-gcc-optimization-flags (format "-O%d" level))
+  (setq-local bb-gcc-optimization-flags (format "-O%d" level))
   ;; Recompile if auto
   (if bb-auto-compile-on-change
       (bb-compile (assoc major-mode bb-languages))))
 
 (defun bb-toggle-auto-compile-on-change ()
-  "Set auto-compilation on change to VALUE."
+  "Set buffer-local auto-compilation on change to VALUE."
   (interactive)
-  (setq bb-auto-compile-on-change (not bb-auto-compile-on-change))
+  (setq-local bb-auto-compile-on-change (not bb-auto-compile-on-change))
   (message "[beardbolt] auto compile on change = %s" bb-auto-compile-on-change))
 
 ;;;; Keymap
