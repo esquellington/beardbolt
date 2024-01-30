@@ -71,8 +71,8 @@ Passed directly to compiler or disassembler."
 (bb--defoption bb-demangle t
   "Non-nil to attempt to demangle the resulting assembly."
   :type 'boolean :safe 'booleanp)
-(bb--defoption bb-execute nil
-  "Non-nil to run resulting program with these arguments."
+(bb--defoption bb-execute-args nil
+  "Commandline arguments passed when running resulting program."
   :type 'string :safe (lambda (v) (or (null v) (eq t v) (stringp v))))
 (bb--defoption bb-ccj-extra-flags nil
   "Extra flags for compilation command devined from compile_commands.json."
@@ -242,7 +242,7 @@ Useful if you have multiple objdumpers and want to select between them")
                 (assemble (in out) `("&&" ,cc "-c" ,in "-o" ,out))
                 (link     (in out) `("&&" ,cc ,in      "-o" ,out))
                 (execute  (in)     `("&& (" ,in
-                                     ,(if (stringp bb-execute) bb-execute "")
+                                     ,(if (stringp bb-execute-args) bb-execute-args "")
                                      "|| true )"))
                 (disassemble (in out) `("&&" ,bb-objdump-binary "-d"
                                         ,in "--insn-width=16" "-l"
@@ -252,7 +252,7 @@ Useful if you have multiple objdumpers and want to select between them")
          ,(lambda (dump-file)
             (cons
              `(,(compile dump-file (f "beardbolt.s"))
-               ,@(when bb-execute
+               ,@(when bb-auto-execute-after-compile
                    `(,(assemble (f "beardbolt.s") (f "beardbolt.o"))
                      ,(link     (f "beardbolt.o") (f "beardbolt.out"))
                      ,(execute  (f "beardbolt.out")))))
@@ -264,7 +264,7 @@ Useful if you have multiple objdumpers and want to select between them")
              `(,(compile     dump-file         (f "beardbolt.s"))
                ,(assemble    (f "beardbolt.s") (f "beardbolt.o"))
                ,(disassemble (f "beardbolt.o") (f "beardbolt.o.disass"))
-               ,@(when bb-execute
+               ,@(when bb-auto-execute-after-compile
                    `(,(link    (f "beardbolt.o") (f "beardbolt.out"))
                      ,(execute (f "beardbolt.out")))))
              (f "beardbolt.o.disass")))
@@ -595,7 +595,7 @@ Argument STR compilation finish status."
         (unless (or (string-match "^interrupt" str)
                     (get-buffer-window compilation-buffer)
                     (and (string-match "^finished" str)
-                         (not (bb--get bb-execute))))
+                         (not (bb--get bb-auto-execute-after-compile))))
           (with-selected-window window
             (let ((cwindow
                    (display-buffer compilation-buffer
