@@ -109,11 +109,13 @@ Passed directly to compiler or disassembler."
 (defvar-local bb--source-buffer nil)
 (defvar-local bb--compile-spec nil)
 (defvar-local bb--declared-output nil)
-(defvar-local bb--dump-file nil "Temporary file")
+(defvar-local bb--dump-file nil "Temporary file.")
 (defvar-local bb--line-mappings nil
   "List where of asm-to-source mappings.
 Each element is ((ASM-BEG-LINE . ASM-END-LINE) . SRC-LINE).")
 (defvar-local bb--rainbow-overlays nil "Rainbow overlays.")
+
+(defvar bb--temp-asm-buffer-lighter-text "--TEMP--")
 
 (defun bb--asm-buffer (src-buffer)
   "Get/create asm buffer for current source file."
@@ -567,10 +569,14 @@ Argument STR compilation finish status."
                             (selected-window)))
          (compile-spec bb--compile-spec)
          (declared-output bb--declared-output)
-         (asm-buffer (bb--asm-buffer src-buffer)))
+         (asm-buffer (bb--asm-buffer src-buffer))
+         ;;eval lighter text from src-buffer
+         (asm-buffer-lighter-text (concat (buffer-local-value 'bb-gcc-arch-flags src-buffer)
+                                          (buffer-local-value 'bb-gcc-optimization-flags src-buffer))))
     (delete-file dump-file-name)
     (with-current-buffer asm-buffer
-      (bb--asm-mode)
+      (setq bb--temp-asm-buffer-lighter-text asm-buffer-lighter-text) ;Set this BEFORE entering bb--asm-mode
+      (bb--asm-mode) ;;enter asm-mode, sets lighter to global bb--temp-asm-buffer-lighter-text
       (setq bb--source-buffer src-buffer)
       (let* ((inhibit-modification-hooks t)
              (inhibit-read-only t)
@@ -838,7 +844,7 @@ With prefix argument, choose from starter files in `bb-starter-files'."
     (remove-hook 'post-command-hook #'bb--synch-relation-overlays t))))
 
 (define-derived-mode bb--asm-mode asm-mode
-  (concat " ⚡asm" bb-gcc-arch-flags bb-gcc-optimization-flags "⚡") ;Show arch+opt in mode-line TODO shorter, strip -march and -O !!? ;;TODO SHOULD RECEIVE AS PARAMS TO SYNC WITH SRC local vars
+  (concat " ⚡asm" bb--temp-asm-buffer-lighter-text "⚡")
   "Toggle `bearbolt--output-mode', internal mode for asm buffers."
   (add-hook 'kill-buffer-hook #'bb-clear-rainbow-overlays nil t)
   (add-hook 'post-command-hook #'bb--synch-relation-overlays nil t)
