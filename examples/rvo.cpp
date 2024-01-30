@@ -1,0 +1,34 @@
+#include <string>
+
+struct MyStruct
+{
+    MyStruct() = default;
+    MyStruct(const MyStruct& obj) = default;
+    int a;
+    float b;
+    std::string c;
+};
+
+template<typename T>
+struct force_rvo: T {
+    force_rvo() {}
+    using T::T;
+    force_rvo(const force_rvo &) = delete;
+    force_rvo(force_rvo &&) = delete;
+};
+
+template<typename T>
+T f()
+{
+    // Fails
+    // auto a = T();
+    // return a;
+
+    // Succeed
+    return T();
+}
+
+int main()
+{
+    return f<force_rvo<MyStruct>>().a;
+}
