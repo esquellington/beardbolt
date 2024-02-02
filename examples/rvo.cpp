@@ -4,7 +4,7 @@ struct MyStruct
 {
     MyStruct() = default;
     MyStruct(const MyStruct& obj) = default;
-    int a;
+    int a = 666;
     float b;
     std::string c;
 };
@@ -30,5 +30,6 @@ T f()
 
 int main()
 {
+    __builtin_printf("v=%d\n",f<force_rvo<MyStruct>>().a);
     return f<force_rvo<MyStruct>>().a;
 }
