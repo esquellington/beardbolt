@@ -606,7 +606,12 @@ Argument STR compilation finish status."
             (let ((cwindow
                    (display-buffer compilation-buffer
                                    `((display-buffer-below-selected)))))
-              (set-window-dedicated-p cwindow 'bb-dedication))))))))
+              (set-window-dedicated-p cwindow 'bb-dedication))))))
+    ;;Sync ASM->SRC after recompilation
+    ;;IMPORTANT: This works if cursor is in SRC buffer on a sync-point, and highlghts/syncs both SRC and ASM IFF
+    (with-current-buffer src-buffer
+      (bb--synch-relation-overlays))
+    ))
 
 (defun bb--compilation-buffer (&rest _)
   (get-buffer-create "*bb-compilation*"))
@@ -695,6 +700,13 @@ determine LANG from `major-mode'."
     (when w
       (delete-window w))))
 
+;;TODO PARAM to optionally sync to CLOSEST, not EXACT
+(defun bb-sync-asm-to-current-src ()
+  "Sync ASM buffer point to current SRC buffer point."
+  (interactive)
+  (message "[beardbolt] bb-sync-asm-to-current-src")
+  (bb--synch-relation-overlays))
+
 ;;;; Keymap
 (defvar bb-mode-map
   (let ((map (make-sparse-keymap)))
@@ -744,10 +756,16 @@ With prefix argument, choose from starter files in `bb-starter-files'."
 (defun bb--recenter-maybe (ov)
   (bb--when-live-buffer (overlay-buffer ov)
     (cl-loop with pos = (overlay-start ov)
-             for w in (cl-remove-if (lambda (w)
-                                      (and (>= pos (* 1.1 (window-start w)))
-                                           (<= pos (* 0.9 (window-end w)))))
-                                    (get-buffer-window-list))
+             for w in
+                       (get-buffer-window-list)
+             ;;Unless we comment this code below and process the whole
+             ;;list, the call to "bb--synch-relation-overlays" in
+             ;;"bb--handle-finish-compile" does not sync ASM buffer
+             ;;correctly
+;                      (cl-remove-if (lambda (w)
+;                                      (and (>= pos (* 1.1 (window-start w)))
+;                                           (<= pos (* 0.9 (window-end w)))))
+;                                    (get-buffer-window-list))
              unless (eq w (selected-window))
              do (set-window-point w pos)
              (with-selected-window w (recenter)))))
