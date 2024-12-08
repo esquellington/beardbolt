@@ -40,7 +40,7 @@
 
 ;;; Code:
 (defgroup beardbolt nil
-  "beardbolt customization options"
+  "Beardbolt customization options."
   :group 'applications)
 
 (defmacro bb--defoption (sym &rest whatever)
@@ -597,7 +597,7 @@ Argument STR compilation finish status."
           (bb--rainbowize src-buffer)) ;;This creates correspondences between SRC/ASM lines, so cannot be skipped to disable rainbow
          (t
           (insert "<Compilation failed>")))
-        ;;This keeps compilation buffer open if not ^finished?
+        ;;This keeps compilation buffer open if not finished?
         (unless (or (string-match "^interrupt" str)
                     (get-buffer-window compilation-buffer)
                     (and (string-match "^finished" str)
@@ -792,6 +792,7 @@ With prefix argument, choose from starter files in `bb-starter-files'."
              (bb--recenter-maybe recenter-target)
              (pulse-momentary-highlight-overlay recenter-target
                                                 'bb-current-line-face)))
+          ;;else, no overlay at-point (or nearby)
           ((not ov)
            (dolist (o all-ovs)
              (overlay-put o 'face (overlay-get o 'beardbolt-rainbow-face)))
