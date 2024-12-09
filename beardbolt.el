@@ -778,11 +778,37 @@ With prefix argument, choose from starter files in `bb-starter-files'."
                       bb--rainbow-overlays
                     (and bb--asm-buffer
                          (buffer-local-value 'bb--rainbow-overlays bb--asm-buffer))))
+         ;;Find overlay that overlaps current point
          (ov (cl-find-if (lambda (ov) (overlay-get ov 'beardbolt-rainbow-face))
                          at-point)))
+
+    ;;If no BB overlay found at point, try to find closest one backwards
+    ;;
+    ;;TODO Should only do this if new param bFindClosest=true, and in
+    ;;that case set the point for both SRC/ASM buffers. Only pass true
+    ;;when called from bb--handle-finish-compile, NOT when this func
+    ;;is called from any other change, otherwise it'd interfere with
+    ;;normal editing and code navigation
+    (when (not ov)
+      ;;(message "[beardbolt] no SRC/ASM sync at point")
+      (let (bf-point)
+        ;;Move to beginning-of-defun point, save bf-point and revert modified point
+        (save-excursion
+          (beginning-of-defun)
+          (setq bf-point (point)))
+        ;;For each beardbolt overlay found between beginning-of-defun
+        ;;and current point, set selected OV to it --> this selects the
+        ;;last one, closest to point, if any
+        (cl-loop for o in (overlays-in bf-point ;(beginning-of-defun)
+                                       (point))
+                 when (overlay-get o 'beardbolt) do (setq ov o))
+        ))
+
+    ;;Sync overlay at-point (or nearby) if found, unless already synced
     (cond ((and ov (not (member ov bb--currently-synched-overlays)))
            (dolist (o all-ovs)
-             (overlay-put o 'face (overlay-get o 'beardbolt-muted-face))) ;;TODO This syncs lines by adding muted face??
+             ;;Does this sync lines by adding muted face??
+             (overlay-put o 'face (overlay-get o 'beardbolt-muted-face)))
            (setq bb--currently-synched-overlays
                  (overlay-get ov 'beardbolt-related-overlays))
            (setq bb--currently-synched-overlays
