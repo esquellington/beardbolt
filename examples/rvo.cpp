@@ -30,6 +30,8 @@ T f()
 
 int main()
 {
+    __builtin_printf("CLZ=%d\n",__builtin_clz(0));
+    __builtin_printf("CTZ=%d\n",__builtin_ctz(0));
     __builtin_printf("v=%d\n",f<force_rvo<MyStruct>>().a);
     return f<force_rvo<MyStruct>>().a;
 }

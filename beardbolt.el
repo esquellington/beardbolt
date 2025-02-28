@@ -40,7 +40,7 @@
 
 ;;; Code:
 (defgroup beardbolt nil
-  "beardbolt customization options"
+  "Beardbolt customization options."
   :group 'applications)
 
 (defmacro bb--defoption (sym &rest whatever)
