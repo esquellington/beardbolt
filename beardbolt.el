@@ -597,7 +597,7 @@ Argument STR compilation finish status."
           (bb--rainbowize src-buffer)) ;;This creates correspondences between SRC/ASM lines, so cannot be skipped to disable rainbow
          (t
           (insert "<Compilation failed>")))
-        ;;This keeps compilation buffer open if not ^finished?
+        ;;This keeps compilation buffer open if not finished?
         (unless (or (string-match "^interrupt" str)
                     (get-buffer-window compilation-buffer)
                     (and (string-match "^finished" str)
@@ -606,7 +606,12 @@ Argument STR compilation finish status."
             (let ((cwindow
                    (display-buffer compilation-buffer
                                    `((display-buffer-below-selected)))))
-              (set-window-dedicated-p cwindow 'bb-dedication))))))))
+              (set-window-dedicated-p cwindow 'bb-dedication))))))
+    ;;Sync ASM->SRC after recompilation
+    ;;IMPORTANT: This works if cursor is in SRC buffer on a sync-point, and highlghts/syncs both SRC and ASM IFF
+    (with-current-buffer src-buffer
+      (bb--synch-relation-overlays))
+    ))
 
 (defun bb--compilation-buffer (&rest _)
   (get-buffer-create "*bb-compilation*"))
@@ -695,6 +700,13 @@ determine LANG from `major-mode'."
     (when w
       (delete-window w))))
 
+;;TODO PARAM to optionally sync to CLOSEST, not EXACT
+(defun bb-sync-asm-to-current-src ()
+  "Sync ASM buffer point to current SRC buffer point."
+  (interactive)
+  (message "[beardbolt] bb-sync-asm-to-current-src")
+  (bb--synch-relation-overlays))
+
 ;;;; Keymap
 (defvar bb-mode-map
   (let ((map (make-sparse-keymap)))
@@ -744,10 +756,16 @@ With prefix argument, choose from starter files in `bb-starter-files'."
 (defun bb--recenter-maybe (ov)
   (bb--when-live-buffer (overlay-buffer ov)
     (cl-loop with pos = (overlay-start ov)
-             for w in (cl-remove-if (lambda (w)
-                                      (and (>= pos (* 1.1 (window-start w)))
-                                           (<= pos (* 0.9 (window-end w)))))
-                                    (get-buffer-window-list))
+             for w in
+                       (get-buffer-window-list)
+             ;;Unless we comment this code below and process the whole
+             ;;list, the call to "bb--synch-relation-overlays" in
+             ;;"bb--handle-finish-compile" does not sync ASM buffer
+             ;;correctly
+;                      (cl-remove-if (lambda (w)
+;                                      (and (>= pos (* 1.1 (window-start w)))
+;                                           (<= pos (* 0.9 (window-end w)))))
+;                                    (get-buffer-window-list))
              unless (eq w (selected-window))
              do (set-window-point w pos)
              (with-selected-window w (recenter)))))
@@ -760,11 +778,37 @@ With prefix argument, choose from starter files in `bb-starter-files'."
                       bb--rainbow-overlays
                     (and bb--asm-buffer
                          (buffer-local-value 'bb--rainbow-overlays bb--asm-buffer))))
+         ;;Find overlay that overlaps current point
          (ov (cl-find-if (lambda (ov) (overlay-get ov 'beardbolt-rainbow-face))
                          at-point)))
+
+    ;;If no BB overlay found at point, try to find closest one backwards
+    ;;
+    ;;TODO Should only do this if new param bFindClosest=true, and in
+    ;;that case set the point for both SRC/ASM buffers. Only pass true
+    ;;when called from bb--handle-finish-compile, NOT when this func
+    ;;is called from any other change, otherwise it'd interfere with
+    ;;normal editing and code navigation
+    (when (not ov)
+      ;;(message "[beardbolt] no SRC/ASM sync at point")
+      (let (bf-point)
+        ;;Move to beginning-of-defun point, save bf-point and revert modified point
+        (save-excursion
+          (beginning-of-defun)
+          (setq bf-point (point)))
+        ;;For each beardbolt overlay found between beginning-of-defun
+        ;;and current point, set selected OV to it --> this selects the
+        ;;last one, closest to point, if any
+        (cl-loop for o in (overlays-in bf-point ;(beginning-of-defun)
+                                       (point))
+                 when (overlay-get o 'beardbolt) do (setq ov o))
+        ))
+
+    ;;Sync overlay at-point (or nearby) if found, unless already synced
     (cond ((and ov (not (member ov bb--currently-synched-overlays)))
            (dolist (o all-ovs)
-             (overlay-put o 'face (overlay-get o 'beardbolt-muted-face))) ;;TODO This syncs lines by adding muted face??
+             ;;Does this sync lines by adding muted face??
+             (overlay-put o 'face (overlay-get o 'beardbolt-muted-face)))
            (setq bb--currently-synched-overlays
                  (overlay-get ov 'beardbolt-related-overlays))
            (setq bb--currently-synched-overlays
@@ -792,6 +836,7 @@ With prefix argument, choose from starter files in `bb-starter-files'."
              (bb--recenter-maybe recenter-target)
              (pulse-momentary-highlight-overlay recenter-target
                                                 'bb-current-line-face)))
+          ;;else, no overlay at-point (or nearby)
           ((not ov)
            (dolist (o all-ovs)
              (overlay-put o 'face (overlay-get o 'beardbolt-rainbow-face)))
